@@ -119,3 +119,24 @@ console.log(obj)  // { port: '3000', color: 'red', config: 'a.js' }
 * process.nextTick
 nextTick是node中自己实现的微任务
 
+## core模块
+
+### fs模块
+
+
+### vm模块
+
+虚拟机模块（沙箱）干净的环境，测试用例。
+内部一般情况下，操作的都是字符串逻辑，如何让一个字符串`console.log(1)`，来当做js运行了。
+1. eval(`console.log(a`);
+2. new Function(`console.log(a)`);  // 可以使用new Function来创建一个沙箱环境，让字符串执行
+
+### 模板引擎的实现原理 with语法+字符串拼接+new Function来实现
+
+模板引擎的实现是读取模板文件`template.html`，然后用变量替换模板中的语法。
+1. 字符串拼接。一步一步地进行拼接，拼接成可执行的js字符串。({{name}}替换成${name})
+2. new Function用于将字符串变成可执行的代码。
+3. with提供作用域，比如传入一个Obj，那么拿到的就都是obj的变量。
+
+
+
