@@ -138,5 +138,180 @@ nextTick是node中自己实现的微任务
 2. new Function用于将字符串变成可执行的代码。
 3. with提供作用域，比如传入一个Obj，那么拿到的就都是obj的变量。
 
+在node中提供了vm模块，这个模块可以用于创建沙箱环境，替代new Function的实现。
+```js
+const code = 'x += 40; var y = 17;';
+const context = {
+    x: 2
+};
+vm.createContext(context);
+// `x` and `y` 是上下文中的全局变量。
+// 最初，x 的值为 2，因为这是 context.x 的值。
+vm.runInContext(code, context);
+
+console.log(context.x);  // 42
+console.log(context.y);  //17
+```
+vm会指定上下文，只能在指定的上下文中查找变量，不会去进行全局查找。
 
 
+### 分析node源码，了解require的原理
+1. 会默认调用require语法
+2. require方法定义在每个模块的原型身上。
+```js
+Module.prototype.require = function(id) {
+  validateString(id, 'id');
+  if (id === '') {
+    throw new ERR_INVALID_ARG_VALUE('id', id,
+                                    'must be a non-empty string');
+  }
+  requireDepth++;
+  try {
+    return Module._load(id, this, /* isMain */ false);
+  } finally {
+    requireDepth--;
+  }
+};
+```
+3. 调用模块的加载方法`Module._load`，这个加载方法最终返回的是`module.exports`;
+4. `Module._resolveFilename` 解析文件名，将文件名变成觉得路径，默认会尝试添加.js，.json等后缀。在这个过程中有缓存机制，
+如果有缓存就不再重新进行加载了。
+5. new Module创建模块(对象)，这个对象包括id,exports,filename等。然后把模块缓存起来。
+```js
+const module = cachedModule || new Module(filename, parent);
+```
+到目前为止，还是模块的创建。
+6. `tryLoadModule`尝试加载模块。`module.load(filename)`;
+7. `module.paths`定义第三方模块的查找路径。
+```js
+this.paths = Module._nodeModulePaths(path.dirname(filename));
+```
+8.获取当前模块的扩展名 根据扩展名调用对应的方法。
+```js
+Module._extensions[extension](this, filename);
+```
+`Module._extensions`有`.js`,`.json`和`.node`三种处理方式，不同的扩展名调用不同的加载方式。
+9. 获取文件的内容。通过fs.readFileSync获取文件内容。
+10. 调用module._compile方法。
+11. 将用户的内容，包裹到一个函数中。
+```js
+let wrap = function(script) {
+  return Module.wrapper[0] + script + Module.wrapper[1];
+};
+
+const wrapper = [
+  '(function (exports, require, module, __filename, __dirname) { ',
+  '\n});'
+];
+```
+12. 通过vm来执行这个字符串函数。
+
+
+### 实现commonjs规范的require方法。
+
+**步骤一：获取绝对路径。**
+```js
+Module._load = function (filePath) {
+    let filename = Module._resolveFilename(filePath);
+}
+```
+因此核心是实现`_resolveFilename`。读取文件时必须使用绝对路径，因此我们首先需要找到这个文件。如果直接找到文件，那么就不需要处理；如果没找到，尝试添加后缀进行查找。
+```js
+Module._resolveFilename = function(filePath){
+   let absFilePath = path.resolve(__dirname,filePath)
+   let isFileExists = fs.existsSync(absFilePath);
+   if(isFileExists){
+       return absFilePath;
+   }
+   // 尝试添加后缀
+   let keys = Object.keys(Module._extensiton);
+   for(let i = 0;i < keys.length;i++ ){
+       let currentPath = absFilePath + keys[i];
+       if(fs.existsSync(currentPath)){
+            return currentPath
+       }
+   }
+}
+
+```
+**步骤二：创建模块。**
+```js
+function Module(id){
+  this.id = id;
+  this.exports = {}
+}
+Module._load = function (filePath) {
+    let filename = Module._resolveFilename(filePath);
+    let module = new Module(filename)
+}
+```
+创建模块，所谓的模块就是一个对象。
+**步骤三：加载模块。**
+加载模块，是通过模块实例的`load`方法实现。
+```js
+Module._load = function (filePath) {
+    let filename = Module._resolveFilename(filePath);
+    let module = new Module(filename)
+    module.load();
+}
+```
+因此，核心是实现这个`load`方法。
+```js
+Module.prototype.load = function(filename){
+    // 获取文件的后缀来进行加载
+    let extname = path.extname(filename);
+    Module._extensiton[extname](this);  // 根据对象的后缀名进行加载。
+}
+```
+`load`的方法的实现是根据不同的后缀名，调用不同的处理策略。所谓的处理策略就是使用fs读取文件内容，然后进行处理。
+我们以简单的`json`格式处理为例：
+```js
+Module._extensiton = {
+    ".js": function (module) {
+       console.log("js:",module)
+    },
+    ".json": function (module) {
+        // 读取文件
+        let content = fs.readFileSync(module.id);
+        // 将读取的字符串对象，parse后赋值给module.exports。
+        module.exports = JSON.parse(content);
+    }
+}
+```
+如上所示，对`json`格式的处理实际上就是读取文件内容(得到的是一个字符串)，然后通过解析成一个对象，最后赋值给`module`实例身上的
+`exports`属性。
+最终返回`module.exports`。
+```js
+Module._load = function (filePath) {
+    let filename = Module._resolveFilename(filePath);
+    let module = new Module(filename)
+    module.load(filename);
+    return module.exports;  // 返回exports属性。
+}
+```
+**步骤四：处理js的策略。**
+js代码读取后不能像`json`格式的数据一样，直接通过`JSON.parse`来执行。而是需要通过类似于eval()或者`new Function`这种能够执行字符串的方式来处理。他的实现就是`加壳`，在外面包一层函数。
+1. **进行包裹，转化成函数形式的字符串**
+```js
+Module.wrap = function(script){
+    const wrapper = [
+        '(function (exports, require, module, __filename, __dirname) { ',
+        script,
+        '\n});'
+    ];
+    return wrapper.join("");
+}
+```
+2. 通过`vm.runInThisContext(fnStr)`转化成可执行的函数;
+```js
+    ".js": function (module) {
+       let content = fs.readFileSync(module.id, "utf-8");
+       let fnStr = Module.wrap(content);
+       let fn = vm.runInThisContext(fnStr);
+       let exports = module.exports;
+       let require = myRequire;
+       let __filename = module.id;
+       let __dirname = path.dirname(module.id);
+       fn.call(exports,exports,require,module,__filename,__dirname);// 执行完这个函数之后就会自动赋值。
+    },
+```
