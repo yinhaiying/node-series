@@ -282,11 +282,17 @@ Module._extensiton = {
 `exports`属性。
 最终返回`module.exports`。
 ```js
+Module.cache = {};
 Module._load = function (filePath) {
     let filename = Module._resolveFilename(filePath);
-    let module = new Module(filename)
+    // 处理缓存
+    if(Module.cache[filename]){
+        return Module.cache[filename].exports;
+    }
+    let module = new Module(filename);
+    Module.cache[filename] = module;
     module.load(filename);
-    return module.exports;  // 返回exports属性。
+    return module.exports;
 }
 ```
 **步骤四：处理js的策略。**
@@ -315,3 +321,4 @@ Module.wrap = function(script){
        fn.call(exports,exports,require,module,__filename,__dirname);// 执行完这个函数之后就会自动赋值。
     },
 ```
+**注意**：虽然exports和module.exports是同一个对象，但是我们最终导出的是module.exports，因此需要注意修改exports不会影响module.exports。只有修改exports.xxx的时候才会导致module.exports发生变化。

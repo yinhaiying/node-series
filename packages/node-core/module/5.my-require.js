@@ -29,9 +29,15 @@ Module._resolveFilename = function(filePath){
        }
    }
 }
+Module.cache = {};
 Module._load = function (filePath) {
     let filename = Module._resolveFilename(filePath);
-    let module = new Module(filename)
+    // 处理缓存
+    if(Module.cache[filename]){
+        return Module.cache[filename].exports;
+    }
+    let module = new Module(filename);
+    Module.cache[filename] = module;
     module.load(filename);
     return module.exports;
 }
@@ -73,4 +79,7 @@ function myRequire(filePath){
 }
 
 const a = myRequire("./a.js");
+myRequire("./a.js");
+myRequire("./a.js");
+myRequire("./a.js");
 console.log(a)
