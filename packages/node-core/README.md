@@ -528,3 +528,27 @@ Buffer.prototype.copy = function(targetBuffer,targetStart,sourceStart=0,sourceEn
 let buffer5  = Buffer.concat([buffer3,buffer4]);
 console.log(buffer5.toString())
 ```
+
+### Stream
+进行文件操作时，我们读取的是buffer，但是通常来说如果一个文件比较大，我们进行I/O操作时，都需要读取到内存中，
+如果文件过大，导致内存被占用过多，通常来说是一遍读取，一遍写入。如下所示：
+**读取**
+```js
+fs.open("./num.txt","r",(err,fd) => {
+    // fd就表示这个文件。file descriptor 文件描述符
+    // buffer的第0个位置开始写入，写入到buffer中几个，文件的读取位置是多少
+  fs.read(fd,buffer,0,3,0,(err,bytesRead) => {
+      // bytersRead是真正的读取个数
+      console.log(bytesRead,buffer);
+  })
+})
+```
+**写入**
+```js
+const wBuffer = Buffer.from("大海你好");
+fs.open("./num1.txt","a",438,function(err,fd){
+    fs.write(fd,wBuffer,0,6,0,function(err,writter){
+        console.log("成功")
+    })
+})
+```
