@@ -322,3 +322,63 @@ Module.wrap = function(script){
     },
 ```
 **注意**：虽然exports和module.exports是同一个对象，但是我们最终导出的是module.exports，因此需要注意修改exports不会影响module.exports。只有修改exports.xxx的时候才会导致module.exports发生变化。
+
+
+### events
+node.js是事件驱动，它的事件机制是核心功能。node中自己实现了一个发布订阅，也就是events类
+
+```js
+const EventEmitter = require("events");
+const event = new EventEmitter();  // 通过这个EventEmitter类创建一个事件对象
+```
+但是，我们一般不会直接使用`EventEmitter`这个类来进行实例化。而是通过继承的方式来实现，这又用到一个新的模块`util`。
+```js
+const EventEmitter = require("events");
+const util = require("util");  // util.promisify/util.inherts
+const event = new EventEmitter();
+util.inherits(Girl,EventEmitter)   // 
+```
+Girl类通过`Util`继承`EventEmitter`。
+
+#### events模块的实现原理
+```js
+function EventEmitter(){
+  this._events = {};
+}
+
+EventEmitter.prototype.on = function(eventName,fn){
+  if(!this._events){
+      this._events = {};
+  }
+  if(!this._events[eventName]){
+      this._events[eventName] = [];
+  }
+  this._events[eventName].push(fn);
+
+}
+
+EventEmitter.prototype.once = function (eventName, fn) {
+    const callback = (...args) =>{
+        fn(...args);
+        this.off(eventName,callback);
+    }
+    callback.fakeFn = fn;  // 给callback增加标识。以方便删除时找到对应的函数
+    this.on(eventName,callback);
+}
+
+EventEmitter.prototype.emit = function (eventName,...args) {
+    if (this._events && this._events[eventName]){
+      this._events[eventName].forEach((fn,index) => {
+          fn(...args);
+      })
+    }
+}
+
+EventEmitter.prototype.off = function (eventName, fn) {
+    if(this._events[eventName]){
+        let list = this._events[eventName];
+        this._events[eventName] = this._events[eventName].filter((cb) => (cb !==fn) && (cb !== fn.fakeFn));
+       
+    }
+}
+```
