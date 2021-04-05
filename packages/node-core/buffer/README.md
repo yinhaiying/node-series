@@ -88,3 +88,5 @@ file.addEventListener("change",(e) => {
     fileReader.readAsDataURL(file);
 })
 ```
+
+

@@ -444,7 +444,7 @@ console.log(str[57]+str[56]+str[62]+str[32])  // 54+g;
 base64一般用于图片转换，但是只适合于小图标，因为经过base64转化后会变大。比如刚刚的`珠`经过转化后变成`54+g`，从
 3个字节变成了4个字节。如果图片比较大，转化成base64之后也会变大，因此不合适。
 
-#### 前端二进制Blob和FileReader
+#### 前端操作二进制——Blob和FileReader
 在前端中，我们一般很少去操作二进制，但是我们有些文件类型是Blob就是二进制文件。
 
 1. input  type file file类型就是继承于Blob。
@@ -472,4 +472,59 @@ file.addEventListener("change",(e) => {
     }
     fileReader.readAsDataURL(file);
 })
+```
+
+#### node.js中的Buffer
+之前我们说了前端操作二进制数据是通过`fileReader`，而后端操作二进制数据是通过`buffer`，buffer代表的都是二进制数据，二进制数据是保存在内存中的，因此肯定需要指定分配内存大小，因此，buffer也是一开始就分配内存，之后不能扩容。
+
+##### buffer声明的三种方式
+```js
+const buffer = Buffer.alloc(5);       // 通过alloc分配内存地址声明
+const buffer1 = Buffer.from("大海");  // 通过from方法声明
+const buffer2 = Buffer.from([0xe6,0xb5,0xb7]);  // 通过数组声明
+```
+
+
+##### buffer的常见属性和方法
+* length
+获取buffer的长度。
+```js
+const buffer = Buffer.alloc(5);
+console.log(buffer.length);   // 5
+```
+* slice() buffer子串
+```js
+console.log(buffer.slice(0,3));
+```
+
+* Buffer.isBuffer()
+判断是否是Buffer。
+```js
+const buffer = Buffer.alloc(5);
+console.log(Buffer.isBuffer(buffer));  // true
+```
+
+* copy():拷贝到某个buffer身上。
+```js
+const buffer3 = Buffer.from("hello");
+const buffer4 = Buffer.from("world");
+const bigBuffer = Buffer.alloc(10);
+buffer3.copy(bigBuffer,0,0,5);
+buffer4.copy(bigBuffer,5);
+console.log(bigBuffer.toString())  // helloworld
+```
+copy的实现原理：实际上就是把遍历buffer的每一个：
+```js
+Buffer.prototype.copy = function(targetBuffer,targetStart,sourceStart=0,sourceEnd=this.length){
+    for (let i = sourceStart;i < sourceEnd;i++){
+        targetBuffer[targetStart] = this[i];
+        targetStart++;
+    }
+}
+```
+
+* concat([])合并多个Buffer
+```js
+let buffer5  = Buffer.concat([buffer3,buffer4]);
+console.log(buffer5.toString())
 ```
