@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>预览</title>
+</head>
+<body>
+    <input type="file" id = "file">
+    <script>
+        file.addEventListener("change",(e) => {
+            let file = e.target.files[0];  // 二进制文件类型
+            let fileReader = new FileReader();  //如果我们想要操作文件，那就需要通过FileReader读取文件
+            fileReader.onload = function(){
+                console.log(fileReader.result);
+                let img = document.createElement("img");
+                img.src = fileReader.result;
+                document.body.appendChild(img);
+            }
+            fileReader.readAsDataURL(file);
+        })
+
+    </script>
+</body>
+</html>
