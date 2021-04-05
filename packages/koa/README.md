@@ -164,3 +164,125 @@ function defineSetter(target, key) {
 }
 defineSetter("response", "body");
 ```
+
+## koa的中间件原理
+
+### koa中间件的使用
+koa中间件的使用，最重要的是理解它的洋葱模型。示例：
+```js
+app.use( async(ctx,next) => {
+    console.log(1);
+    next();
+    console.log(2)
+})
+
+app.use(async (ctx, next) => {
+    console.log(3);
+    next();
+    console.log(4)
+})
+
+
+app.use(async (ctx, next) => {
+    console.log(5);
+    next();
+    console.log(6)
+})
+```
+上面的代码，用一个洋葱模型来描述就是如下图所示：
+![洋葱模型](./imgs/koa洋葱模型.png);
+洋葱模型中next表示执行下一个中间件。因此，上面代码的执行顺序是：
+1. 执行`console.log(1)`
+2. 执行next(),由于执行next实际上就是执行下一个中间件。也就是执行下一个函数
+```js
+(ctx, next) => {
+    console.log(3);
+    next();
+    console.log(4)
+}
+```
+3. 下一个函数，先输出3，然后又执行了next，因此会继续执行下一个中间件函数。
+```js
+(ctx, next) => {
+    console.log(5);
+    next();
+    console.log(6)
+}
+```
+4. 下一个中间件函数，先输出5，然后执行next，由于没有其他的中间件了，因此直接往下执行，输出6。到此为止，最后一个中间件执行完毕，表示第二个中间件的next函数执行完毕，执行后面的输出4。然后执行完毕，
+执行后面的输出6。因此，最终的顺序是1，3,5,6,4,2。
+
+上面的代码中，我们没有使用`await`进行等待，如果使用了`await`结果可能就不是按照我们想象的顺序执行。因为await后面的都是微任务，需要等到同步任务执行完毕才能执行，比如我们给第二个中间件使用了`await`
+### koa中间件使用async和await
+```js
+app.use( async(ctx,next) => {
+    console.log(1);
+    next();
+    console.log(2)
+})
+
+app.use(async (ctx, next) => {
+    console.log(3);
+    await next();
+    console.log(4)
+})
+
+
+app.use(async (ctx, next) => {
+    console.log(5);
+    next();
+    console.log(6)
+})
+```
+如上代码所示，我们给第二个中间件使用了await，这样的话它执行的顺序就是：1,3,5,6,2,4。它的执行过程如下：
+1. 先输出1
+2. 第一个中间件的next执行，那么就会执行第二个中间件。首先输出3，
+然后碰到`await next()`;那么它会进行两步操作，一：执行next函数；二：将`await next()`后面的代码都放到微任务中去。这样的话执行顺序就是：
+3. 第三个中间件执行分别输出5和6。这时候会查看发现有同步任务，那么就会先输出2，然后再执行异步任务，输出4。
+
+**总结：**
+koa的中间件原理：将所有的中间件，组合成一个大的promise，当这个promise执行完毕后，会采用当前的ctx.body进行结果的响应，(**next前面必须有await 或者return 否则执行顺序可能达不到预期**)。注意：响应的永远是第一个的中间件的结果(因为其他的中间件其实都是包裹在第一个中间件中的)。
+1. 如果都是同步逻辑，加不加await无所谓
+2. 如果可能存在异步逻辑，那么都加上await。
+
+#### next的功能：
+1. 可以把多个模块通过next方法连接起来
+2. 可以决定是否向下执行（可以实现后台权限）
+
+```js
+app.use( async(ctx,next) => {
+    console.log(1);
+    await next();
+    console.log(2)
+})
+
+app.use(async (ctx, next) => {
+    console.log(3);
+    // await next();   这里没有调用next
+    // console.log(4)
+})
+app.use(async (ctx, next) => {
+    console.log(5);
+    await next();
+    console.log(6)
+})
+```
+我们可以看到第二个中间件没有调用next，最终得到的结果是：1,3,2，也就是后面的中间件函数没有执行了。
+3. 可以封装一些方法，在中间件中，封装后向下执行。
+```js
+
+app.use( async(ctx,next) => {
+    console.log(1);
+    ctx.name = "hello,world";  // 封装了name属性
+    await next();
+    console.log(2)
+})
+
+app.use(async (ctx, next) => {
+    console.log(3);
+    console.log(ctx.name)    // 在后面的中间件中获取到这个属性
+    await next();
+    console.log(4)
+})
+```
+我们在第一个中间件中封装了`ctx.name`，在后面的中间件中可以获取到这个属性，从而进行使用。
