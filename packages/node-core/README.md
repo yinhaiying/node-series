@@ -382,3 +382,6 @@ EventEmitter.prototype.off = function (eventName, fn) {
     }
 }
 ```
+
+### Buffer
+
