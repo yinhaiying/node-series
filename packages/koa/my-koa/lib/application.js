@@ -3,7 +3,7 @@ const http = require("http");
 const context = require("./context");
 const request = require("./request");
 const response = require("./response");
-
+const Stream = require("stream");
 
 class Application extends EventEmitter {
     constructor(){
@@ -49,6 +49,14 @@ class Application extends EventEmitter {
       let ctx = this.createContext(req,res);
       this.compose(ctx).then(() => {
           let body = ctx.body;
+          if(typeof body === "string" || Buffer.isBuffer(body)){
+              res.end(body);
+          }else if(body instanceof  Stream){
+              res.setHeader("Content-Disposition",`attachement;filename`)
+              body.pip(res);
+          }else if(typeof body === "object"){
+              res.end(JSON.stringify(body));
+          }
           res.end(body)
       })
     //   this.callback(ctx);

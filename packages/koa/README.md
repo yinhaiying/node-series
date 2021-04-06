@@ -165,6 +165,43 @@ function defineSetter(target, key) {
 defineSetter("response", "body");
 ```
 
+#### 中间件的实现
+详见中间件的原理部分
+
+#### 结果的处理
+
+在上面的中间件的实现，我们知道当所有中间件结束之后，我们最终是在promise中拿到最终的结果，然后通过`ctx.body`进行返回。
+但是我们知道ctx.body是可以返回任何数据类型的。如下所示：
+```js
+app.use(async (ctx,next) => {
+    ctx.body = {name:"hello"}
+})
+```
+这些数据格式需要做一些处理，才能够在前端进行展示。
+```js
+handleRequest(req,res) {
+    let ctx = this.createContext(req,res);
+    this.compose(ctx).then(() => {
+        let body = ctx.body;
+        // 处理body的数据格式。
+
+        if(typeof body === "string" || Buffer.isBuffer(body)){
+            res.end(body);
+        }else if(body instanceof  Stream){
+            res.setHeader("Content-Disposition",`attachement;filename`)
+            body.pip(res);
+        }else if(typeof body === "object"){
+            res.end(JSON.stringify(body));
+        }
+        res.end(body)
+    })
+//   this.callback(ctx);
+}
+```
+
+
+
+
 ## koa的中间件原理
 
 ### koa中间件的使用
