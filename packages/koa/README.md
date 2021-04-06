@@ -286,3 +286,39 @@ app.use(async (ctx, next) => {
 })
 ```
 我们在第一个中间件中封装了`ctx.name`，在后面的中间件中可以获取到这个属性，从而进行使用。
+
+#### 中间件的实现
+
+1. 中间件不在是直接执行了，而是需要通过compose来组合起来。
+```js
+    use(callback) {
+        this.middlewares.push(callback);  // 使用middlewares保存每个中间件
+        // this.callback = callback;
+    }
+```
+中间件的处理，实际上是返回一个大的promise，在这个promise中处理通过ctx.body进行返回。
+```js
+    handleRequest(req,res) {
+      let ctx = this.createContext(req,res);
+      this.compose(ctx).then(() => {
+          let body = ctx.body;
+          res.end(body);  // 这里进行处理
+      })
+    }
+```
+因此，核心就是实现`compose`方法，这个`compose`方法就是用来去实现洋葱模型，也就是先执行第一个中间件，
+然后调用`next`就执行第二个中间件。这种异步迭代最常见的方式就是使用一个函数来实现。
+```js
+compose(ctx){
+    // 在数组中取出第一个，第一个执行后，调用next执行第二个。
+    const dispatch = (i) => {
+        if(i === this.middlewares.length){
+            return Promise.resolve();
+        }
+    let middleware = this.middlewares[i];
+    return Promise.resolve( middleware(ctx, () => dispatch(i + 1)) ) // next方法指的是  () => dispatch(i+1)
+    }
+    dispatch(0);
+}
+```
+这里我们需要注意的是：`next`函数其实是一个回调函数，在这个回调函数中执行下一个中间件。

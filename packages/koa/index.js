@@ -6,14 +6,12 @@ const app = new Koa();
 
 app.use( async(ctx,next) => {
     console.log(1);
-    ctx.name = "hello,world";
     await next();
     console.log(2)
 })
 
 app.use(async (ctx, next) => {
     console.log(3);
-    console.log(ctx.name)
     await next();
     console.log(4)
 })

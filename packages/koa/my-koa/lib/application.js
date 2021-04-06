@@ -12,9 +12,11 @@ class Application extends EventEmitter {
         this.context = Object.create(context);
         this.request = Object.create(request);
         this.response = Object.create(response);
+        this.middlewares = [];  // 存储用户所有的callback
     }
     use(callback) {
-        this.callback = callback;
+        this.middlewares.push(callback);
+        // this.callback = callback;
     }
     createContext(req,res){
         // 每次请求都创建全新的上下文，防止多个请求之间共享数据
@@ -32,9 +34,24 @@ class Application extends EventEmitter {
         context.response.res = res;
         return context;
     }
+    compose(ctx){
+      // 在数组中取出第一个，第一个执行后，调用next执行第二个。
+      const dispatch = (i) => {
+          if(i === this.middlewares.length){
+              return Promise.resolve();
+          }
+        let middleware = this.middlewares[i];
+       return Promise.resolve( middleware(ctx, () => dispatch(i + 1)) ) // next方法指的是  () => dispatch(i+1)
+      }
+      dispatch(0);
+    }
     handleRequest(req,res) {
       let ctx = this.createContext(req,res);
-      this.callback(ctx);
+      this.compose(ctx).then(() => {
+          let body = ctx.body;
+          res.end(body)
+      })
+    //   this.callback(ctx);
     }
     listen(...args) {
         let server = http.createServer(this.handleRequest.bind(this));
