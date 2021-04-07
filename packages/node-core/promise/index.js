@@ -25,9 +25,20 @@ class Promise{
             reject(error);
         }
     }
+    then(onFulfilled,onRejected){
+      if(this.status === RESOLVED){
+          onFulfilled(this.value);
+      }
+      if(this.status === REJECTED){
+          console.log("失败原因：",this.reason)
+          onRejected(this.reason);
+      }
+    }
 }
 
 let p = new Promise((resolve,reject) => {
     console.log("ok");
-    resolve("OK")
-})
+    reject("失败")
+});
+
+p.then((result) => {},(reason) => {})
