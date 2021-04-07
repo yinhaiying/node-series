@@ -184,7 +184,7 @@ handleRequest(req,res) {
     this.compose(ctx).then(() => {
         let body = ctx.body;
         // 处理body的数据格式。
-
+ 
         if(typeof body === "string" || Buffer.isBuffer(body)){
             res.end(body);
         }else if(body instanceof  Stream){
