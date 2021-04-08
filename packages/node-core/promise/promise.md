@@ -398,3 +398,37 @@ p1.then((data) => {
     };
 ```
 resolve和reject的区别是resolve会等待promise的then的执行结果，直到是一个普通值为止，而reject是不会等待的。
+
+## promise.finally(callback)
+finally的使用情况是你需要同时在`then`和`catch`中进行相同的处理，比如取消`loading`状态等。可以避免这种重复的操作，就使用`finally`，它是无论如何都会执行的代码,它不接收参数。
+**finally的代码无论如何都会执行**
+```js
+Promise.resolve("123").then(() => {}).finally((data) => {
+    console.log("finally:",data)
+})
+// finally undefined
+```
+
+**finally如果返回一个promise**
+finally如果返回的是一个promise，那么会根据这个promise的状态将值传递给then或者catch进行处理。
+如果是成功的promise，那么会将之前的值传递下去，不管finally的resolve的值。
+如果是失败的promise，则会将失败结果传递下去，不管之前的值。
+```js
+Promise.resolve("123").finally((data) => {
+    return new Promise((resolve,reject) => {
+        reject("失败了，失败了");
+    })
+}).then((data)=>{
+    console.log("成功",data);
+}).catch((error) => {
+    console.log("失败",error);
+})
+```
+如上所示，返回的是：
+```js
+// 失败  失败了，失败了
+```
+
+**finally的实现**
+finally的实现实际上就是一个`then`。
+
