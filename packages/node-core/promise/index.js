@@ -32,6 +32,16 @@ const resolvePromise = (promise2, x, resolve, reject) => {
 
 }
 class Promise{
+    static resolve(value) {
+      return new Promise((resolve,reject) => {
+          resolve(value);
+      })
+    }
+    static reject(reason){
+        return new Promise((resolve,reject) => {
+            reject(reason);
+        })
+    }
     constructor(executor){
         this.status = PENDING;
         this.value = undefined;  // 成功的结果
@@ -43,6 +53,9 @@ class Promise{
 
 
         let resolve = (value) => {
+            if(value instanceof Promise){
+                return value.then(resolve,reject);// 递归解析resolve中的参数，直到是一个普通值
+            }
             if(this.status === PENDING){
                 this.value = value;
                 this.status = RESOLVED;
@@ -124,6 +137,7 @@ class Promise{
         this.then(null,errorCallback);
     }
 }
+
 
 
 module.exports = Promise;

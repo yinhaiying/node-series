@@ -371,3 +371,30 @@ p1.then((data) => {
         this.then(null,errorCallback);
     }
 ```
+## Promise的reaolve和reject静态方法
+```js
+    static resolve(value) {
+      return new Promise((resolve,reject) => {
+          resolve(value);
+      })
+    }
+    static reject(reason){
+        return new Promise((resolve,reject) => {
+            reject(reason);
+        })
+    }
+```
+但是这里存在一个问题，那就是如果resolve中又是一个promise，那么它返回的就会是一个promise而不是promise的then执行的值。因此，我们需要判断一下`resolve(value)`是否是一个`promise`。
+```js
+    let resolve = (value) => {
+        if(value instanceof Promise){
+            return value.then(resolve,reject);// 递归解析resolve中的参数，直到是一个普通值
+        }
+        if(this.status === PENDING){
+            this.value = value;
+            this.status = RESOLVED;
+            this.onResolvedCallbacks.forEach((fn) => fn());
+        }
+    };
+```
+resolve和reject的区别是resolve会等待promise的then的执行结果，直到是一个普通值为止，而reject是不会等待的。
