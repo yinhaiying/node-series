@@ -8,26 +8,7 @@ const resolvePromise = (promise2, x, resolve, reject) => {
       return reject(new TypeError("Chaining cycle detected for promise #<Promise>"))
   }
   // 后续的条件要严格判断，保证能够和别的库兼容
-  if((typeof x === "object" && x !== null) || typeof x === "function"){
-    // 如果是对象或者是函数，才可能是一个promise。
-    try {
-        // 如果是promise那么一定有then方法
-        let then = x.then;
-        if(typeof then === "function"){  // 只能认为是一个promise
-          then.call(x,(y) => {
-            resolve(y)
-          },(error) => {
-            reject(error);
-          });
-        }else{  // {then:"hello"}
-          resolve(x);
-        }
-    } catch (error) {
-        reject(error);
-    }
-  }else{
-      resolve(x);  // 普通值
-  }
+  
 
 }
 class Promise{
@@ -96,6 +77,11 @@ class Promise{
 
 
 
+
+// 1. promise调用then的方法时,可能promise的状态仍然处于pengdign状态。因此两个回调函数都不会执行
+// 2. 发布订阅模式，如果状态是pending状态，我们需要将成功和失败的回调保存起来。稍后调用resolve或者reject再执行。
+// 3. 由于promise可以多次调用回调函数，而且都会被执行。因此，我们需要将成功的回调函数放在一起，失败的放到一起，然后再根据
+//    状态进行执行。
 
 let p1 = new Promise((resolve,reject) => {
     setTimeout(()=>{

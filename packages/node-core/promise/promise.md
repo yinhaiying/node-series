@@ -275,3 +275,39 @@ p2.then((data2) => {
     }
 ```
 如上所示，我们将所有值的获取都放到异步中进行了，这样再调用`resolvePromise`时就可以拿到返回的自身promise了。
+
+### then返回值的处理resolvePromise方法
+`rsolvePromise`的核心就是处理promise的返回值，根据不同的返回值做不同的处理。
+1. 如果typeof x不是object或者function,说明返回的就是普通值。那么直接resolve
+2. 如果typeof x是object或者function，那么存在两种情况。
+   * 看x上是否有then属性，如果then属性不是一个函数，说明返回的是类似于{then:123}这种普通对象。直接resolve即可。
+   * 如果x上有then属性，而且then属性是一个函数，那么就认为它是一个promise，那么我们需要执行这个promise，拿到这个promise的值，再进行resolve或者reject。
+```js
+const resolvePromise = (promise2, x, resolve, reject) => {
+  if (promise2 === x) {
+      return reject(new TypeError("Chaining cycle detected for promise #<Promise>"))
+  }
+  // 后续的条件要严格判断，保证能够和别的库兼容
+  if((typeof x === "object" && x !== null) || typeof x === "function"){
+    // 如果是对象或者是函数，才可能是一个promise。
+    try {
+        // 如果是promise那么一定有then方法
+        let then = x.then;
+        if(typeof then === "function"){  // 只能认为是一个promise
+          then.call(x,(y) => {
+            resolve(y)
+          },(error) => {
+            reject(error);
+          });
+        }else{  // {then:"hello"}
+          resolve(x);
+        }
+    } catch (error) {
+        reject(error);
+    }
+  }else{
+      resolve(x);  // 普通值
+  }
+
+}
+```
