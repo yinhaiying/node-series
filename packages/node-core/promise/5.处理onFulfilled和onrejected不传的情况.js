@@ -23,7 +23,6 @@ const resolvePromise = (promise2, x, resolve, reject) => {
           resolve(x);
         }
     } catch (error) {
-        console.log("2222222222")
         reject(error);
     }
   }else{
@@ -76,52 +75,33 @@ class Promise{
         }
         let promise2 = new Promise((resolve,reject) => {
             if (this.status === RESOLVED) {
-                     setTimeout(() => {
-                         try {
-                            let x = onFulfilled(this.value);
-                            resolvePromise(promise2, x, resolve, reject);
-                         } catch (error) {
-                              reject(error);
-                         }
-                     })
+                setTimeout(() => {
+                    let x = onFulfilled(this.value);
+                    resolvePromise(promise2, x, resolve, reject);
+                })
             }
             if (this.status === REJECTED) {
                 setTimeout(() => {
-                    try {
-                        let x = onRejected(this.reason);
-                        resolvePromise(promise2, x, resolve, reject);
-                    } catch (error) {
-                        reject(error);
-                    }
+                    let x = onRejected(this.reason);
+                    resolvePromise(promise2, x, resolve, reject);
                 })
             }
             if (this.status === PENDING) {
                 this.onResolvedCallbacks.push(() => {
                     setTimeout(() => {
-                        try {
-                            let x = onFulfilled(this.value);
-                            resolvePromise(promise2, x, resolve, reject);
-                        } catch (error) {
-                            reject(error);
-                        }
+                        let x = onFulfilled(this.value);
+                        resolvePromise(promise2, x, resolve, reject);
                     })
                 });
                 this.onRejectedCallbacks.push(() => {
                     setTimeout(() => {
-                        try {
-                            let x = onRejected(this.reason);
-                            resolvePromise(promise2, x, resolve, reject);
-                        } catch (error) {
-                            reject(error);
-                        }
+                        let x = onRejected(this.reason);
+                        resolvePromise(promise2, x, resolve, reject);
                     })
                 })
             }
         })
       return promise2
-    }
-    catch(errorCallback){
-        this.then(null,errorCallback);
     }
 }
 

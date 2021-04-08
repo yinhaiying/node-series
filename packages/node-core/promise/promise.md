@@ -31,7 +31,7 @@ class Promise{
 }
 ```
 
-## promsie的then方法
+## promise的then方法
  1. promise调用then的方法时,可能promise的状态仍然处于pengdign状态。因此两个回调函数都不会执行
 2. 发布订阅模式，如果状态是pending状态，我们需要将成功和失败的回调保存起来。稍后调用resolve或者reject再执行。
 3. 由于promise可以多次调用回调函数，而且都会被执行。因此，我们需要将成功的回调函数放在一起，失败的放到一起，然后再根据状态进行执行。
@@ -114,7 +114,7 @@ p.then((result) => {
 
 ```
 
-## then的链式调用
+### 1.then的链式调用
 1. promise成功和失败的回调(onfulfilled和onrejected)的返回值，可以传递给外层的下一个then
 2. 回调的返回值有几种情况：
    * 普通值(传递到下一次的成功中，无论是成功的返回值还是失败的返回值，只要返回普通值就传递到外面的下一个then的成功回调中)
@@ -122,7 +122,8 @@ p.then((result) => {
    * 出错(传递到下一个的失败，如果离自己最近的then没有处理失败(没有定义失败的回调函数)，那么会传递到下一个的失败回调中去)
 3. promise可以链式调用是因为每次执行回调函数返回的都是一个新的promise。为什么返回的是一个新的promise，这是因为promise一旦成功，他的状态就不会改变了，而我们的回掉函数可能返回成功也可能返回失败的结果。
 
-### promise实现链式调用，因此then返回的一定是另外一个promise
+### 2.promise的返回值
+promise实现链式调用，因此then返回的一定是另外一个promise
 这里我们先初步实现一个promsise的then的返回。
 ```js
     then(onFulfilled,onRejected){
@@ -276,7 +277,7 @@ p2.then((data2) => {
 ```
 如上所示，我们将所有值的获取都放到异步中进行了，这样再调用`resolvePromise`时就可以拿到返回的自身promise了。
 
-### then返回值的处理resolvePromise方法
+### 3.then返回值的处理resolvePromise方法
 `rsolvePromise`的核心就是处理promise的返回值，根据不同的返回值做不同的处理。
 1. 如果typeof x不是object或者function,说明返回的就是普通值。那么直接resolve
 2. 如果typeof x是object或者function，那么存在两种情况。
@@ -312,7 +313,7 @@ const resolvePromise = (promise2, x, resolve, reject) => {
 }
 ```
 
-### then值的穿透
+### 4.then值的穿透
 在promiseA+规范中，then的两个参数`onfulfilled和onrejected`两个参数都不是必填的。所有的值可以进行穿透，只需要在最后能够被捕获就行了。
 ```js
 let p1 = new Promise((resolve, reject) => {
@@ -341,4 +342,32 @@ p1.then()  // 没有onfulfilled和onrejected
         }
     }
 
+```
+
+## promise的catch方法
+promise的`catch`方法实际上就是`onFulfilled`的语法糖，我们可以看下我们经常的使用方式：
+```js
+let p1 = new Promise((resolve, reject) => {
+    reject("失败")
+});
+
+p1.then((data) => {
+    console.log("值的串透");
+}).catch((err) => {
+    console.log("err:",err);
+});
+```
+实际上我们可以写成这样：
+```js
+p1.then((data) => {
+    console.log("值的串透");
+}).then(null,(err) => {
+    console.log("err:",err);
+});
+```
+我们可以看到`catch`实际上就是没有成功的`then`的一种情况，因此我们可以这样定义catch.
+```js
+    catch(errorCallback){
+        this.then(null,errorCallback);
+    }
 ```
