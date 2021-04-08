@@ -62,17 +62,6 @@ class Promise{
         }
     }
     then(onFulfilled,onRejected){
-        // 处理onfulfilled和onrejected的情况
-        if (typeof onFulfilled !== "function") {
-            onFulfilled = function onFulfilled(value) {
-                return value;
-            }
-        }
-        if (typeof onRejected !== "function") {
-            onRejected = function onRejected(reason) {
-                throw reason;
-            }
-        }
         let promise2 = new Promise((resolve,reject) => {
             if (this.status === RESOLVED) {
                 setTimeout(() => {
@@ -106,6 +95,20 @@ class Promise{
 }
 
 
-module.exports = Promise;
 
 
+let p1 = new Promise((resolve,reject) => {
+    setTimeout(()=>{
+        console.log("hello");
+        resolve(100);
+    },2000)
+   
+})
+let p2 = p1.then((data) => {
+    return new Promise((resolve,reject) => {
+        resolve("返回一个promise")
+    })
+})
+p2.then((data) => {
+    console.log("data2:",data)
+})

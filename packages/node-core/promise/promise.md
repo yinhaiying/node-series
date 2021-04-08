@@ -311,3 +311,34 @@ const resolvePromise = (promise2, x, resolve, reject) => {
 
 }
 ```
+
+### then值的穿透
+在promiseA+规范中，then的两个参数`onfulfilled和onrejected`两个参数都不是必填的。所有的值可以进行穿透，只需要在最后能够被捕获就行了。
+```js
+let p1 = new Promise((resolve, reject) => {
+    resolve(1)
+})
+p1.then()  // 没有onfulfilled和onrejected
+  .then()  // 没有onfulfilled和onrejected
+  .then((data) => {
+    console.log("值的串透")
+})
+```
+我们可以看到多个`then`方法中都没有`onfulfilled和onrejected`，只有最后一个`then`进行了处理。
+因此，我们调用then的方法时，也需要进行处理。判断onfulfilled是否存在。
+```js
+    then(onFulfilled,onRejected){
+        // onFulfilled和onRejected未传递的情况
+        if (typeof onFulfilled !== "function") {
+            onFulfilled = function onFulfilled(value) {
+                return value;
+            }
+        }
+        if (typeof onRejected !== "function") {
+            onRejected = function onRejected(reason) {
+                throw reason;
+            }
+        }
+    }
+
+```
