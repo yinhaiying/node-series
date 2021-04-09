@@ -1,0 +1,10 @@
+{
+  "name": "img_anti_theft",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "mime": "^2.5.2",
+    "nodemon": "^2.0.7"
+  }
+}
